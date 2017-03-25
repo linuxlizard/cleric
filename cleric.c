@@ -1,3 +1,16 @@
+/*  Watch a subprocess, respawn it upon its death.
+ *
+ * Originally created to monitor a service in a small embedded Linux system
+ * without a SysVInit and where /etc/inittab wouldn't have worked for
+ * complicated reasons.
+ *
+ * /usr/bin/cleric /sbin/importantdaemond   # if importantdaemond crashes, restart it.
+ * 
+ * XXX still needs some work.
+ *
+ * davep 20170320;  
+ */
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <stdint.h>
@@ -12,6 +25,7 @@
 
 static sig_atomic_t quit;
 
+/* TODO switch to syslog */
 #define info printf
 #define err printf
 
@@ -96,6 +110,9 @@ int fratricide(struct party_member *p)
 
 	/* kill off a party member */
 	while (1) {
+		/* TODO after a few attempts using SIGTERM with no results, bring down
+		 * the SIGKILL hammer 
+		 */
 		retcode = kill(p->pid, SIGTERM);
 		if (retcode < 0) {
 			perror("kill");
@@ -210,7 +227,7 @@ int main(int argc, char *argv[])
 		member.argv = &argv[1];
 		member.pid = child_pid;
 
-		/* keep an eye on meat shield, will you? */
+		/* keep an eye on the meat shield, will you? */
 		watch_loop(&member);
 	}
 
