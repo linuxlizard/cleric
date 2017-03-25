@@ -22,10 +22,14 @@
 #include <errno.h>
 #include <sys/types.h>
 #include <sys/wait.h>
+#include <syslog.h>
 
 static sig_atomic_t quit;
 
+#define PROGNAME "cleric"
+
 /* TODO switch to syslog */
+#define dbg printf
 #define info printf
 #define err printf
 
@@ -126,7 +130,7 @@ int fratricide(struct party_member *p)
 			perror("waitpid");
 			return retcode;
 		}
-		printf("waiting for %s pid=%d to die\n", p->path, p->pid);
+		info("waiting for %s pid=%d to die\n", p->path, p->pid);
 		sleep(1);
 	}
 
@@ -152,23 +156,23 @@ int watch_loop(struct party_member *p)
 			perror("waitpid");
 			return -1;
 		}
-		printf("child=%d finished status=%#x\n", p->pid, status);
+		info("child=%d finished status=%#x\n", p->pid, status);
 
 		time_t death = time(NULL);
 		if (difftime(death, p->birth) < 60 && p->raise_count > 6) {
-			printf("Player dying too often. Giving up. LTP, noob.\n");
+			err("Player dying too often. Giving up. LTP, noob.\n");
 			return -1;
 		}
 
 		/* from the man page */
 		if (WIFEXITED(status)) {
-			printf("exited, status=%d\n", WEXITSTATUS(status));
+			info("exited, status=%d\n", WEXITSTATUS(status));
 		} else if (WIFSIGNALED(status)) {
-			printf("killed by signal %d\n", WTERMSIG(status));
+			info("killed by signal %d\n", WTERMSIG(status));
 		} else if (WIFSTOPPED(status)) {
-			printf("stopped by signal %d\n", WSTOPSIG(status));
+			info("stopped by signal %d\n", WSTOPSIG(status));
 		} else if (WIFCONTINUED(status)) {
-			printf("continued\n");
+			info("continued\n");
 		}
 
 		/* a party member has died! raise dead */
@@ -184,7 +188,7 @@ int watch_loop(struct party_member *p)
 			p->pid = retpid;
 			p->birth = time(NULL);
 			p->raise_count++;
-			printf("%s raised as pid=%d\n", p->path, p->pid);
+			dbg("%s raised as pid=%d\n", p->path, p->pid);
 		}
 
 	}
@@ -200,6 +204,8 @@ int main(int argc, char *argv[])
 		/* TODO usage */
 		return EXIT_FAILURE;
 	}
+
+	openlog(PROGNAME, LOG_PID|LOG_NDELAY, LOG_USER);
 
 	init_signals();
 
@@ -219,7 +225,7 @@ int main(int argc, char *argv[])
 	}
 	else {
 		/* parent */
-		printf("child pid=%d\n", child_pid);
+		dbg("child pid=%d\n", child_pid);
 
 		struct party_member member;
 		memset( &member, 0, sizeof(struct party_member));
@@ -231,6 +237,7 @@ int main(int argc, char *argv[])
 		watch_loop(&member);
 	}
 
+	closelog();
 	return EXIT_SUCCESS;
 }
 
