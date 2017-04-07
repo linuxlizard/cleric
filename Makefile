@@ -1,5 +1,5 @@
 CC=gcc
-CFLAGS+=-g -Wall -pedantic
+CFLAGS+=-g -Wall -pedantic -std=c99
 LDFLAGS+=-g
 
 all:cleric

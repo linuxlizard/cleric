@@ -11,6 +11,8 @@
  * davep 20170320;  
  */
 
+#define _GNU_SOURCE
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <stdint.h>
